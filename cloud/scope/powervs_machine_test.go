@@ -269,20 +269,20 @@ func TestNewPowerVSMachineScope(t *testing.T) {
 		params PowerVSMachineScopeParams
 	}{
 		{
-			name: "Error when Client in nil",
+			name: "Returns error when controller runtime client in nil",
 			params: PowerVSMachineScopeParams{
 				Client: nil,
 			},
 		},
 		{
-			name: "Error when Machine in nil",
+			name: "Returns error when Machine in nil",
 			params: PowerVSMachineScopeParams{
 				Client:  testEnv.Client,
 				Machine: nil,
 			},
 		},
 		{
-			name: "Error when Cluster is nil",
+			name: "Returns error when Cluster is nil",
 			params: PowerVSMachineScopeParams{
 				Client:  testEnv.Client,
 				Machine: newMachine(machineName),
@@ -290,7 +290,7 @@ func TestNewPowerVSMachineScope(t *testing.T) {
 			},
 		},
 		{
-			name: "Error when IBMPowerVSMachine is nil",
+			name: "Returns error when IBMPowerVSMachine is nil",
 			params: PowerVSMachineScopeParams{
 				Client:            testEnv.Client,
 				Machine:           newMachine(machineName),
@@ -299,7 +299,7 @@ func TestNewPowerVSMachineScope(t *testing.T) {
 			},
 		},
 		{
-			name: "Failed to get authenticator",
+			name: "Error initialising authenticator",
 			params: PowerVSMachineScopeParams{
 				Client:            testEnv.Client,
 				Machine:           newMachine(machineName),
@@ -396,7 +396,7 @@ func TestGetServiceInstanceIDForMachineScope(t *testing.T) {
 }
 
 func TestSetReady(t *testing.T) {
-	t.Run("SetReady", func(t *testing.T) {
+	t.Run("Set Machine status to ready", func(t *testing.T) {
 		g := NewWithT(t)
 		machineScope := PowerVSMachineScope{
 			IBMPowerVSMachine: &infrav1beta2.IBMPowerVSMachine{
@@ -409,7 +409,7 @@ func TestSetReady(t *testing.T) {
 }
 
 func TestSetNotReady(t *testing.T) {
-	t.Run("SetNotReady", func(t *testing.T) {
+	t.Run("Set status of machine as not ready", func(t *testing.T) {
 		g := NewWithT(t)
 		machineScope := PowerVSMachineScope{
 			IBMPowerVSMachine: &infrav1beta2.IBMPowerVSMachine{
@@ -430,7 +430,7 @@ func TestGetRegion(t *testing.T) {
 		expectedRegion string
 	}{
 		{
-			name: "Region holds a value",
+			name: "Machine's region is set",
 			scope: PowerVSMachineScope{
 				IBMPowerVSMachine: &infrav1beta2.IBMPowerVSMachine{
 					Status: infrav1beta2.IBMPowerVSMachineStatus{
@@ -440,7 +440,7 @@ func TestGetRegion(t *testing.T) {
 			},
 			expectedRegion: region,
 		}, {
-			name: "Region is set to nil",
+			name: "Machine's region is nil",
 			scope: PowerVSMachineScope{
 				IBMPowerVSMachine: &infrav1beta2.IBMPowerVSMachine{
 					Status: infrav1beta2.IBMPowerVSMachineStatus{
@@ -467,7 +467,7 @@ func TestSetRegion(t *testing.T) {
 		expectedRegion string
 	}{
 		{
-			name: "Set region to a value",
+			name: "Set machine's region to us-east",
 			scope: PowerVSMachineScope{
 				IBMPowerVSMachine: &infrav1beta2.IBMPowerVSMachine{
 					Status: infrav1beta2.IBMPowerVSMachineStatus{},
@@ -475,7 +475,7 @@ func TestSetRegion(t *testing.T) {
 			},
 			expectedRegion: "us-east",
 		}, {
-			name: "Set region to an  empty value",
+			name: "Set machine's region to an empty value",
 			scope: PowerVSMachineScope{
 				IBMPowerVSMachine: &infrav1beta2.IBMPowerVSMachine{
 					Status: infrav1beta2.IBMPowerVSMachineStatus{},
@@ -501,7 +501,7 @@ func TestGetZone(t *testing.T) {
 		expectedZone string
 	}{
 		{
-			name: "Zone holds a value",
+			name: "Machine's zone is set",
 			scope: PowerVSMachineScope{
 				IBMPowerVSMachine: &infrav1beta2.IBMPowerVSMachine{
 					Status: infrav1beta2.IBMPowerVSMachineStatus{
@@ -511,7 +511,7 @@ func TestGetZone(t *testing.T) {
 			},
 			expectedZone: "us-south-1",
 		}, {
-			name: "Zone is set to nil",
+			name: "Machine's zone is nil",
 			scope: PowerVSMachineScope{
 				IBMPowerVSMachine: &infrav1beta2.IBMPowerVSMachine{
 					Status: infrav1beta2.IBMPowerVSMachineStatus{
@@ -538,7 +538,7 @@ func TestSetZone(t *testing.T) {
 		expectedZone string
 	}{
 		{
-			name: "Set zone to a value",
+			name: "Set machine's zone to us-east-1",
 			scope: PowerVSMachineScope{
 				IBMPowerVSMachine: &infrav1beta2.IBMPowerVSMachine{
 					Status: infrav1beta2.IBMPowerVSMachineStatus{},
@@ -546,7 +546,7 @@ func TestSetZone(t *testing.T) {
 			},
 			expectedZone: "us-east-1",
 		}, {
-			name: "Set zone to an  empty value",
+			name: "Set machine's zone to an empty value",
 			scope: PowerVSMachineScope{
 				IBMPowerVSMachine: &infrav1beta2.IBMPowerVSMachine{
 					Status: infrav1beta2.IBMPowerVSMachineStatus{},
@@ -566,7 +566,7 @@ func TestSetZone(t *testing.T) {
 }
 
 func TestGetInstanceState(t *testing.T) {
-	t.Run("Get instance state", func(t *testing.T) {
+	t.Run("Set powervsinstance state to ready", func(t *testing.T) {
 		g := NewWithT(t)
 		machineScope := PowerVSMachineScope{
 			IBMPowerVSMachine: &infrav1beta2.IBMPowerVSMachine{
@@ -592,7 +592,7 @@ func TestGetIgnitionVersion(t *testing.T) {
 				IBMPowerVSCluster: &infrav1beta2.IBMPowerVSCluster{},
 			},
 		}, {
-			name:                    "Custom Ignition Version",
+			name:                    "Custom Ignition Version is set",
 			expectedIgnitionVersion: "3.4",
 			scope: PowerVSMachineScope{
 				IBMPowerVSCluster: &infrav1beta2.IBMPowerVSCluster{
@@ -622,13 +622,13 @@ func TestBootstrapDataKey(t *testing.T) {
 		expectedBootstrapDataKey string
 	}{
 		{
-			name:                     "BootstrapDataKey - control plane",
+			name:                     "Returns BootstrapDataKey for a machine in control plane",
 			machineLabel:             capiv1beta1.MachineControlPlaneLabel,
 			machineName:              "foo-machine-0",
 			expectedBootstrapDataKey: path.Join("control-plane", "foo-machine-0"),
 		},
 		{
-			name:                     "BootstrapDataKey - worker node",
+			name:                     "Returns BootstrapDataKey for a worker node",
 			machineName:              "foo-machine-1",
 			machineLabel:             "foo",
 			expectedBootstrapDataKey: path.Join("node", "foo-machine-1"),
@@ -674,7 +674,7 @@ func TestGetNetworkID(t *testing.T) {
 
 	const networkID = "foo-network-id"
 	t.Run("Get Network ID", func(t *testing.T) {
-		t.Run("Fetch from Network spec's ID", func(t *testing.T) {
+		t.Run("Returns networkID from Network spec's ID", func(t *testing.T) {
 			g := NewWithT(t)
 			scope := PowerVSMachineScope{}
 			expectedNetworkID := networkID
@@ -685,7 +685,7 @@ func TestGetNetworkID(t *testing.T) {
 			g.Expect(*result).To(Equal(expectedNetworkID))
 			g.Expect(err).To(BeNil())
 		})
-		t.Run("Fetch network ID from PowerVS Machine scope", func(t *testing.T) {
+		t.Run("Returns network ID from PowerVS Machine scope", func(t *testing.T) {
 			g := NewWithT(t)
 			setup(t)
 			t.Cleanup(teardown)
@@ -805,7 +805,7 @@ func TestGetNetworkID(t *testing.T) {
 
 func TestGetMachineInternalIP(t *testing.T) {
 	t.Run("Get Machine Internal IP", func(t *testing.T) {
-		t.Run("Address type - Node Internal IP", func(t *testing.T) {
+		t.Run("Returns machine IP for address type - Node Internal IP", func(t *testing.T) {
 			g := NewWithT(t)
 			expectedAddress := "10.0.0.1"
 			scope := PowerVSMachineScope{
@@ -823,7 +823,7 @@ func TestGetMachineInternalIP(t *testing.T) {
 			g.Expect(expectedAddress).To(Equal(scope.GetMachineInternalIP()))
 		})
 
-		t.Run("Address type = node external IP", func(t *testing.T) {
+		t.Run("Returns empty IP for address type - node external IP", func(t *testing.T) {
 			g := NewWithT(t)
 			scope := PowerVSMachineScope{
 				IBMPowerVSMachine: &infrav1beta2.IBMPowerVSMachine{
@@ -836,6 +836,14 @@ func TestGetMachineInternalIP(t *testing.T) {
 						},
 					},
 				},
+			}
+			g.Expect("").To(Equal(scope.GetMachineInternalIP()))
+		})
+
+		t.Run("Returns empty IP if powervsmachineStatus in nil", func(t *testing.T) {
+			g := NewWithT(t)
+			scope := PowerVSMachineScope{
+				IBMPowerVSMachine: &infrav1beta2.IBMPowerVSMachine{},
 			}
 			g.Expect("").To(Equal(scope.GetMachineInternalIP()))
 		})
@@ -893,7 +901,7 @@ func TestCreateCOSClient(t *testing.T) {
 
 	t.Run("Create COS client", func(t *testing.T) {
 		mockResourceController := resourcecontrollermock.NewMockResourceController(gomock.NewController(t))
-		t.Run("Create ignition data - error getting instance", func(t *testing.T) {
+		t.Run("Error getting COS service instance", func(t *testing.T) {
 			g := NewWithT(t)
 			setup(t)
 			t.Cleanup(teardown)
@@ -906,7 +914,7 @@ func TestCreateCOSClient(t *testing.T) {
 			g.Expect(err).ToNot(BeNil())
 		})
 
-		t.Run("Create ignition data - empty service instance", func(t *testing.T) {
+		t.Run("COS service instance is nil", func(t *testing.T) {
 			g := NewWithT(t)
 			setup(t)
 			t.Cleanup(teardown)
@@ -919,7 +927,7 @@ func TestCreateCOSClient(t *testing.T) {
 			g.Expect(err).To(BeNil())
 		})
 
-		t.Run("Create ignition data - service instance is not in active state", func(t *testing.T) {
+		t.Run("COS service instance is not in active state", func(t *testing.T) {
 			g := NewWithT(t)
 			setup(t)
 			t.Cleanup(teardown)
@@ -935,7 +943,7 @@ func TestCreateCOSClient(t *testing.T) {
 			g.Expect(err.Error()).To(ContainSubstring(expectedError))
 		})
 
-		t.Run("Create ignition data - bucket region not set", func(t *testing.T) {
+		t.Run("Failed to determine COS bucket region", func(t *testing.T) {
 			g := NewWithT(t)
 			setup(t)
 			t.Cleanup(teardown)
@@ -951,7 +959,7 @@ func TestCreateCOSClient(t *testing.T) {
 			g.Expect(result).To(BeNil())
 			g.Expect(err.Error()).To(ContainSubstring(expectedError))
 		})
-		t.Run("Create ignition data - success", func(t *testing.T) {
+		t.Run("Creates COS client successfully", func(t *testing.T) {
 			g := NewWithT(t)
 			setup(t)
 			t.Cleanup(teardown)
@@ -974,7 +982,7 @@ func TestCreateCOSClient(t *testing.T) {
 
 func TestClose(t *testing.T) {
 	t.Run("Test Close", func(t *testing.T) {
-		t.Run("IBMPowerVSMachine is not nil", func(t *testing.T) {
+		t.Run("Returns error when IBMPowerVSMachine is not nil", func(t *testing.T) {
 			g := NewWithT(t)
 			scope := setupPowerVSMachineScope(clusterName, machineName, core.StringPtr(pvsImage), core.StringPtr(pvsNetwork), true, nil)
 			patchHelper, _ := patch.NewHelper(scope.IBMPowerVSMachine, scope.Client)
@@ -982,7 +990,7 @@ func TestClose(t *testing.T) {
 			err := scope.Close()
 			g.Expect(err).To(BeNil())
 		})
-		t.Run("IBMPowerVSMachine is nil", func(t *testing.T) {
+		t.Run("Closes current scope successfully when IBMPowerVSMachine is nil", func(t *testing.T) {
 			g := NewWithT(t)
 			scope := setupPowerVSMachineScope(clusterName, machineName, core.StringPtr(pvsImage), core.StringPtr(pvsNetwork), true, nil)
 			patchHelper, _ := patch.NewHelper(scope.IBMPowerVSMachine, scope.Client)
@@ -1026,7 +1034,7 @@ func TestSetInstanceID(t *testing.T) {
 }
 
 func TestSetFailureReason(t *testing.T) {
-	t.Run("Test SetFailureReason", func(t *testing.T) {
+	t.Run("Set failure reason to InvalidConfiguration", func(t *testing.T) {
 		g := NewWithT(t)
 		scope := PowerVSMachineScope{
 			IBMPowerVSMachine: &infrav1beta2.IBMPowerVSMachine{
@@ -1040,7 +1048,7 @@ func TestSetFailureReason(t *testing.T) {
 
 func TestSetHealth(t *testing.T) {
 	t.Run("Test SetHealth", func(t *testing.T) {
-		t.Run("Test SetHealth - status healthy", func(t *testing.T) {
+		t.Run("Set PVMInstance status to healthy", func(t *testing.T) {
 			g := NewWithT(t)
 			scope := PowerVSMachineScope{
 				IBMPowerVSMachine: &infrav1beta2.IBMPowerVSMachine{
@@ -1053,7 +1061,7 @@ func TestSetHealth(t *testing.T) {
 			scope.SetHealth(healthStatus)
 			g.Expect(scope.IBMPowerVSMachine.Status.Health).To(Equal(healthStatus.Status))
 		})
-		t.Run("Test SetHealth - nil health status", func(t *testing.T) {
+		t.Run("Set PVMInstance status to nil", func(t *testing.T) {
 			g := NewWithT(t)
 			scope := PowerVSMachineScope{
 				IBMPowerVSMachine: &infrav1beta2.IBMPowerVSMachine{
@@ -1067,7 +1075,7 @@ func TestSetHealth(t *testing.T) {
 }
 
 func TestSetFailureMessage(t *testing.T) {
-	t.Run("Test SetFailureMessage", func(t *testing.T) {
+	t.Run("Set failure message for PowerVSMachine status", func(t *testing.T) {
 		g := NewWithT(t)
 		scope := PowerVSMachineScope{
 			IBMPowerVSMachine: &infrav1beta2.IBMPowerVSMachine{
@@ -1081,7 +1089,7 @@ func TestSetFailureMessage(t *testing.T) {
 }
 func TestDeleteMachineIgnition(t *testing.T) {
 	t.Run("Delete machine ignition", func(t *testing.T) {
-		t.Run("Failed to retrieve bootstrap data: linked Machine's bootstrap.dataSecretName is nil", func(t *testing.T) {
+		t.Run("Fails to retrieve bootstrap data: linked Machine's bootstrap.dataSecretName is nil", func(t *testing.T) {
 			g := NewWithT(t)
 			scope := PowerVSMachineScope{
 				Machine: &capiv1beta1.Machine{
@@ -1160,7 +1168,7 @@ func TestDeleteMachineIgnition(t *testing.T) {
 			g.Expect(err).ToNot(BeNil())
 		})
 
-		t.Run("Test creating COS client", func(t *testing.T) {
+		t.Run("Successful DeleteMachineIgnition", func(t *testing.T) {
 			g := NewWithT(t)
 			bootstrapSecret := newBootstrapSecret(clusterName, machineName)
 			initObjects := []client.Object{
