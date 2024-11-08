@@ -926,7 +926,6 @@ func TestGetMachineInternalIP(t *testing.T) {
 }
 
 func TestSetProviderID(t *testing.T) {
-
 	providerID := "foo-provider-id"
 
 	t.Run("Set Provider ID in v1 format", func(t *testing.T) {
