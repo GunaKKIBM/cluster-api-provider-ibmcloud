@@ -323,6 +323,7 @@ func TestGetServiceInstanceIDForMachineScope(t *testing.T) {
 	testcases := []struct {
 		name                      string
 		expectedServiceInstanceID string
+		expectedError             error
 		machineScope              PowerVSMachineScope
 	}{
 		{
@@ -337,6 +338,7 @@ func TestGetServiceInstanceIDForMachineScope(t *testing.T) {
 					},
 				},
 			},
+			expectedError: nil,
 		}, {
 			name:                      "get service instance ID from powervsClusterSpec",
 			expectedServiceInstanceID: "service-instance-1",
@@ -347,6 +349,7 @@ func TestGetServiceInstanceIDForMachineScope(t *testing.T) {
 					},
 				},
 			},
+			expectedError: nil,
 		}, {
 			name:                      "get service instance ID from powervsClusterSpec's serviceInstance",
 			expectedServiceInstanceID: "service-instance-2",
@@ -359,6 +362,7 @@ func TestGetServiceInstanceIDForMachineScope(t *testing.T) {
 					},
 				},
 			},
+			expectedError: nil,
 		}, {
 			name:                      "get service instance ID with serviceInstanceID present in both IBMPowerVSCluster Status and Spec ",
 			expectedServiceInstanceID: "service-instance-in-status",
@@ -374,25 +378,96 @@ func TestGetServiceInstanceIDForMachineScope(t *testing.T) {
 					},
 				},
 			},
+			expectedError: nil,
 		}, {
-			name:                      "Returns empty service instance ID",
+			name:                      "Failed to find service instance id",
 			expectedServiceInstanceID: "",
 			machineScope: PowerVSMachineScope{
 				IBMPowerVSCluster: &infrav1beta2.IBMPowerVSCluster{
-					Status: infrav1beta2.IBMPowerVSClusterStatus{},
-					Spec:   infrav1beta2.IBMPowerVSClusterSpec{},
+					Spec: infrav1beta2.IBMPowerVSClusterSpec{
+						ServiceInstance: &infrav1beta2.IBMPowerVSResourceReference{},
+					},
 				},
 			},
+			expectedError: fmt.Errorf("failed to find service instance id as both name and id are not set"),
 		},
 	}
 
 	for _, tc := range testcases {
 		g := NewWithT(t)
 		t.Run(tc.name, func(_ *testing.T) {
-			serviceInstanceID := tc.machineScope.GetServiceInstanceID()
+			serviceInstanceID, err := tc.machineScope.GetServiceInstanceID()
 			g.Expect(serviceInstanceID).To(Equal(tc.expectedServiceInstanceID))
+			if tc.expectedError != nil {
+				g.Expect(err).To(Equal(tc.expectedError))
+			} else {
+				g.Expect(err).To(BeNil())
+			}
 		})
 	}
+
+	// Running other test cases which need some mock calls to be defined
+	var mockCtrl *gomock.Controller
+
+	setup := func(t *testing.T) {
+		t.Helper()
+		mockCtrl = gomock.NewController(t)
+	}
+	teardown := func() {
+		mockCtrl.Finish()
+	}
+
+	mockResourceController := resourcecontrollermock.NewMockResourceController(gomock.NewController(t))
+	t.Run("Returns service instance ID successfully", func(t *testing.T) {
+		g := NewWithT(t)
+		setup(t)
+		t.Cleanup(teardown)
+		scope := PowerVSMachineScope{
+			IBMPowerVSCluster: &infrav1beta2.IBMPowerVSCluster{
+				Spec: infrav1beta2.IBMPowerVSClusterSpec{
+					ServiceInstance: &infrav1beta2.IBMPowerVSResourceReference{
+						Name: core.StringPtr("foo-cluster"),
+					},
+				},
+			},
+			IBMPowerVSMachine: &infrav1beta2.IBMPowerVSMachine{
+				Status: infrav1beta2.IBMPowerVSMachineStatus{
+					Zone: core.StringPtr("us-south-1"),
+				},
+			},
+		}
+		mockResourceController.EXPECT().GetServiceInstance("", "foo-cluster", gomock.Any()).Return(&resourcecontrollerv2.ResourceInstance{GUID: core.StringPtr("foo-id")}, nil)
+		scope.ResourceClient = mockResourceController
+		serviceInstanceID, err := scope.GetServiceInstanceID()
+		g.Expect(serviceInstanceID).To(Equal("foo-id"))
+		g.Expect(err).To(BeNil())
+	})
+
+	t.Run("Failed to get Power VS service instance id", func(t *testing.T) {
+		g := NewWithT(t)
+		setup(t)
+		t.Cleanup(teardown)
+		scope := PowerVSMachineScope{
+			IBMPowerVSCluster: &infrav1beta2.IBMPowerVSCluster{
+				Spec: infrav1beta2.IBMPowerVSClusterSpec{
+					ServiceInstance: &infrav1beta2.IBMPowerVSResourceReference{
+						Name: core.StringPtr("foo-cluster"),
+					},
+				},
+			},
+			IBMPowerVSMachine: &infrav1beta2.IBMPowerVSMachine{
+				Status: infrav1beta2.IBMPowerVSMachineStatus{
+					Zone: core.StringPtr("us-south-1"),
+				},
+			},
+		}
+		scope.Error(fmt.Errorf("failed to list instance-id"), "failed to get Power VS service instance id", "serviceInstanceName", "foo-cluster")
+		mockResourceController.EXPECT().GetServiceInstance("", "foo-cluster", gomock.Any()).Return(nil, fmt.Errorf("failed to list instance id"))
+		scope.ResourceClient = mockResourceController
+		serviceInstanceID, err := scope.GetServiceInstanceID()
+		g.Expect(serviceInstanceID).To(Equal(""))
+		g.Expect(err).ToNot(BeNil())
+	})
 }
 
 func TestSetReady(t *testing.T) {
@@ -851,36 +926,54 @@ func TestGetMachineInternalIP(t *testing.T) {
 }
 
 func TestSetProviderID(t *testing.T) {
-	t.Run("Set Provider ID", func(t *testing.T) {
-		providerID := core.StringPtr("foo-provider-id")
-		t.Run("Set Provider ID in v2 format", func(t *testing.T) {
-			g := NewWithT(t)
-			scope := setupPowerVSMachineScope(clusterName, machineName, core.StringPtr(pvsImage), core.StringPtr(pvsNetwork), true, nil)
-			options.ProviderIDFormat = string(options.ProviderIDFormatV2)
-			scope.SetZone("us-south-1")
-			scope.SetRegion(region)
-			scope.IBMPowerVSCluster.Spec.ServiceInstanceID = "service-instance-1"
-			scope.SetProviderID(providerID)
-			expectedProviderID := ptr.To(fmt.Sprintf("ibmpowervs://%s/%s/%s/%s", scope.GetRegion(), scope.GetZone(), scope.GetServiceInstanceID(), *providerID))
-			g.Expect(*scope.IBMPowerVSMachine.Spec.ProviderID).To(Equal(*expectedProviderID))
-		})
 
-		t.Run("Provider ID is nil", func(t *testing.T) {
-			g := NewWithT(t)
-			scope := setupPowerVSMachineScope(clusterName, machineName, core.StringPtr(pvsImage), core.StringPtr(pvsNetwork), true, nil)
-			options.ProviderIDFormat = string(options.ProviderIDFormatV2)
-			scope.SetProviderID(nil)
-			g.Expect(scope.IBMPowerVSMachine.Spec.ProviderID).To(BeNil())
-		})
+	providerID := "foo-provider-id"
 
-		t.Run("Set Provider ID in v1 format", func(t *testing.T) {
-			g := NewWithT(t)
-			scope := setupPowerVSMachineScope(clusterName, machineName, core.StringPtr(pvsImage), core.StringPtr(pvsNetwork), true, nil)
-			options.ProviderIDFormat = string(options.ProviderIDFormatV1)
-			scope.SetProviderID(providerID)
-			expectedProviderID := ptr.To(fmt.Sprintf("ibmpowervs://%s/%s", scope.Machine.Spec.ClusterName, scope.IBMPowerVSMachine.Name))
-			g.Expect(*scope.IBMPowerVSMachine.Spec.ProviderID).To(Equal(*expectedProviderID))
-		})
+	t.Run("Set Provider ID in v1 format", func(t *testing.T) {
+		g := NewWithT(t)
+		scope := setupPowerVSMachineScope(clusterName, machineName, core.StringPtr(pvsImage), core.StringPtr(pvsNetwork), true, nil)
+		options.ProviderIDFormat = string(options.ProviderIDFormatV1)
+		err := scope.SetProviderID("foo-providerID")
+		expectedProviderID := ptr.To(fmt.Sprintf("ibmpowervs://%s/%s", scope.Machine.Spec.ClusterName, scope.IBMPowerVSMachine.Name))
+		g.Expect(*scope.IBMPowerVSMachine.Spec.ProviderID).To(Equal(*expectedProviderID))
+		g.Expect(err).To(BeNil())
+	})
+
+	t.Run("failed to get service instance ID", func(t *testing.T) {
+		g := NewWithT(t)
+		scope := PowerVSMachineScope{
+			IBMPowerVSCluster: &infrav1beta2.IBMPowerVSCluster{
+				Status: infrav1beta2.IBMPowerVSClusterStatus{
+					ServiceInstance: &infrav1beta2.ResourceReference{},
+				},
+				Spec: infrav1beta2.IBMPowerVSClusterSpec{
+					ServiceInstance: &infrav1beta2.IBMPowerVSResourceReference{},
+				},
+			},
+		}
+		options.ProviderIDFormat = string(options.ProviderIDFormatV2)
+		err := scope.SetProviderID(providerID)
+		g.Expect(err).ToNot(BeNil())
+	})
+	t.Run("Set Provider ID in v2 format", func(t *testing.T) {
+		g := NewWithT(t)
+		scope := PowerVSMachineScope{
+			IBMPowerVSCluster: &infrav1beta2.IBMPowerVSCluster{
+				Status: infrav1beta2.IBMPowerVSClusterStatus{
+					ServiceInstance: &infrav1beta2.ResourceReference{
+						ID: core.StringPtr("foo-service-instance-id"),
+					},
+				},
+			},
+			IBMPowerVSMachine: &infrav1beta2.IBMPowerVSMachine{},
+		}
+		options.ProviderIDFormat = string(options.ProviderIDFormatV2)
+		scope.SetZone("us-south-1")
+		scope.SetRegion(region)
+		err := scope.SetProviderID(providerID)
+		expectedProviderID := ptr.To(fmt.Sprintf("ibmpowervs://%s/%s/%s/%s", scope.GetRegion(), scope.GetZone(), "foo-service-instance-id", providerID))
+		g.Expect(*scope.IBMPowerVSMachine.Spec.ProviderID).To(Equal(*expectedProviderID))
+		g.Expect(err).To(BeNil())
 	})
 }
 
